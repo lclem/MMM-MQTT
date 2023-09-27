@@ -21,7 +21,7 @@ Module.register("MMM-MQTT", {
   },
 
   start: function () {
-    Log.info(this.name + " started.");
+    Log.info(this.name + " started!");
     this.subscriptions = this.makeSubscriptions(this.config.mqttServers);
 
     this.openMqttConnection();
@@ -178,6 +178,23 @@ Module.register("MMM-MQTT", {
     return sub.value;
   },
 
+  // timestamps in milliseconds
+  convertAge: function (timestamp) {
+    let diff = Date.now() - timestamp;
+    let seconds = Math.floor(diff / 1000);
+    let hours = Math.floor(seconds / 3600);
+    seconds = seconds - hours * 3600;
+
+    let minutes = Math.floor(seconds / 60);
+    seconds = seconds - minutes * 60;
+
+    let hoursStr = hours == 0? "" : `${hours}h`;
+    let minutesStr = minutes == 0? "" : `${minutes}m`;
+    let secondsStr = seconds == 0 || minutes !== 0? "" : `${seconds}s`;
+
+    return hoursStr + minutesStr + secondsStr;
+  },
+
   getDom: function () {
     return this.getWrapper(
       document,
@@ -187,7 +204,8 @@ Module.register("MMM-MQTT", {
       this.name,
       this.getColors,
       this.isValueTooOld,
-      this.convertValue
+      this.convertValue,
+      this.convertAge
     );
   },
   getWrapper(
@@ -198,7 +216,8 @@ Module.register("MMM-MQTT", {
     name,
     getColors,
     isValueTooOld,
-    convertValue
+    convertValue,
+    convertAge
   ) {
     const wrapper = document.createElement("table");
     wrapper.className = "small";
@@ -221,7 +240,7 @@ Module.register("MMM-MQTT", {
 
         // Label
         var labelWrapper = doc.createElement("td");
-        labelWrapper.innerHTML = sub.label;
+        labelWrapper.innerHTML = sub.maxAgeSeconds == -1 ? "when" : sub.label;
         labelWrapper.className = "align-left mqtt-label";
         labelWrapper.style.color = colors.label;
         subWrapper.appendChild(labelWrapper);
@@ -229,7 +248,7 @@ Module.register("MMM-MQTT", {
         // Value
         tooOld = isValueTooOld(sub.maxAgeSeconds, sub.time);
         var valueWrapper = doc.createElement("td");
-        var setValueinnerHTML = convertValue(sub);
+        var setValueinnerHTML = sub.maxAgeSeconds == -1 ? convertAge(sub.time) : convertValue(sub);
         valueWrapper.innerHTML = setValueinnerHTML;
         valueWrapper.className =
           "align-right medium mqtt-value " + (tooOld ? "dimmed" : "bright");
